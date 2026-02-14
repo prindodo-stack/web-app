@@ -3,212 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>실시간 익명 방명록 | Admin Mode</title>
+    <title>Lee Jung-do | Code Archive</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;700;900&display=swap');
-        body { font-family: 'Pretendard', sans-serif; }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
+        body { font-family: 'Pretendard', sans-serif; letter-spacing: -0.02em; }
+        .app-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .app-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        .glass-header { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .fetching { animation: pulse-soft 1.5s infinite; }
     </style>
 </head>
-<body class="bg-[#f8fafc] text-slate-900 min-h-screen pb-20">
-    <div class="max-w-2xl mx-auto px-4 py-12">
-        <!-- 헤더 -->
-        <header class="text-center mb-10 relative">
-            <button onclick="toggleAdminModal()" class="absolute right-0 top-0 p-2 text-slate-300 hover:text-blue-500 transition-colors" title="관리자 로그인">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            </button>
-            <div class="inline-flex items-center justify-center p-4 bg-blue-600 shadow-lg rounded-[28px] mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            </div>
-            <h1 class="text-4xl font-black tracking-tight text-slate-900 mb-2">실시간 방명록</h1>
-            <p id="adminBadge" class="hidden text-blue-600 font-bold text-sm mb-2">🛡️ 관리자 모드 활성화됨 (삭제 가능)</p>
-            <p class="text-slate-500 font-medium text-sm">따뜻한 한마디를 남겨주세요.</p>
-        </header>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
 
-        <!-- 입력 섹션 -->
-        <section class="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 p-8 mb-12">
-            <div class="space-y-5">
-                <div class="relative group">
-                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    </div>
-                    <input id="nickname" type="text" placeholder="닉네임" class="w-full pl-12 pr-4 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-semibold outline-none" maxlength="20">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass-header border-b border-slate-200">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2.5 rounded-xl shadow-lg shadow-indigo-200">
+                    <i class="fas fa-terminal text-white"></i>
                 </div>
-                <div class="relative">
-                    <textarea id="content" placeholder="메시지를 입력해 주세요..." class="w-full p-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all min-h-[120px] resize-none font-medium outline-none"></textarea>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 leading-tight">이정도 연구사</h1>
+                    <p class="text-[10px] text-indigo-600 font-black uppercase tracking-widest">Web App Archive</p>
                 </div>
-                <button id="sendBtn" onclick="sendMessage()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    방명록 남기기
-                </button>
             </div>
-        </section>
+            <div class="flex items-center gap-3">
+                <button id="login-btn" onclick="toggleModal('login-modal')" class="text-slate-600 text-sm font-bold px-5 py-2.5 hover:bg-slate-100 rounded-full transition-all">관리자 로그인</button>
+                <div id="admin-controls" class="hidden flex items-center gap-2">
+                    <button onclick="toggleAdminPanel()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-indigo-700 shadow-md transition-all flex items-center gap-2">
+                        <i class="fas fa-plus"></i> 앱 등록
+                    </button>
+                    <button onclick="handleLogout()" class="text-slate-400 hover:text-red-500 p-2.5 transition-colors" title="로그아웃">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
 
-        <!-- 목록 -->
-        <section class="space-y-6">
-            <div class="flex items-center justify-between px-4">
-                <h2 class="text-lg font-black text-slate-800">최근 대화 <span id="count" class="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-lg text-xs font-mono ml-1">0</span></h2>
-            </div>
-            <div id="messageList" class="space-y-4">
-                <div class="text-center py-20 text-slate-300">데이터를 불러오고 있습니다...</div>
-            </div>
-        </section>
-    </div>
-
-    <!-- 관리자 로그인 모달 -->
-    <div id="adminModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl animate-fade-in">
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+    <!-- Login Modal -->
+    <div id="login-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-50 text-indigo-600 rounded-full mb-4">
+                    <i class="fas fa-user-shield text-2xl"></i>
                 </div>
-                <h3 class="text-xl font-black text-slate-800">Admin Login</h3>
-                <p class="text-sm text-slate-400">관리자 계정 정보를 입력하세요.</p>
+                <h2 class="text-2xl font-black text-slate-800">Admin Login</h2>
+                <p class="text-slate-500 text-sm mt-1">계정 정보를 입력하세요.</p>
             </div>
             <div class="space-y-4">
-                <input id="adminEmail" type="email" placeholder="이메일 주소" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-medium">
-                <input id="adminPw" type="password" placeholder="비밀번호" class="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+                <input type="email" id="login-email" placeholder="이메일 주소" class="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all">
+                <input type="password" id="login-password" placeholder="비밀번호" class="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all">
                 <div class="flex gap-2 pt-2">
-                    <button onclick="toggleAdminModal()" class="flex-1 py-4 font-bold text-slate-400 hover:bg-slate-50 rounded-xl transition-colors">닫기</button>
-                    <button id="loginBtn" onclick="handleLogin()" class="flex-1 py-4 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">로그인</button>
+                    <button onclick="toggleModal('login-modal')" class="flex-1 py-4 rounded-2xl font-bold bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all">닫기</button>
+                    <button onclick="handleLogin()" class="flex-1 py-4 rounded-2xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">로그인</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Supabase 설정
-        const SUPABASE_URL = "https://zyuybhszykxuafzriksn.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_3h3_2LRYgdyeXdoDO6XZMA_4jQrQTtV";
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        let isAdmin = false;
-
-        // 모달 토글
-        function toggleAdminModal() {
-            document.getElementById('adminModal').classList.toggle('hidden');
-        }
-
-        // 로그인 로직
-        async function handleLogin() {
-            const email = document.getElementById('adminEmail').value;
-            const password = document.getElementById('adminPw').value;
-            const btn = document.getElementById('loginBtn');
-
-            if(!email || !password) return alert("정보를 모두 입력해 주세요.");
-
-            btn.innerText = "로그인 중...";
-            btn.disabled = true;
-
-            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                alert("로그인 실패: " + error.message + "\n(Supabase에서 Email Provider를 활성화했는지 확인해 주세요!)");
-                btn.innerText = "로그인";
-                btn.disabled = false;
-            } else {
-                isAdmin = true;
-                document.getElementById('adminBadge').classList.remove('hidden');
-                toggleAdminModal();
-                loadMessages(); // 삭제 버튼 표시를 위해 목록 새로고침
-            }
-        }
-
-        // 메시지 삭제 로직
-        async function deleteMessage(id) {
-            if (!confirm("이 메시지를 영구적으로 삭제하시겠습니까?")) return;
-            
-            const { error } = await _supabase
-                .from('guestbook')
-                .delete()
-                .eq('id', id);
-            
-            if (error) {
-                alert("삭제 권한이 없거나 오류가 발생했습니다: " + error.message);
-            } else {
-                // 실시간 구독으로 인해 자동으로 UI가 갱신되지만, 즉각적인 반응을 위해 다시 로드
-                loadMessages();
-            }
-        }
-
-        // 메시지 템플릿 생성
-        function createMessageHTML(msg) {
-            const date = new Date(msg.created_at);
-            const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            return `
-                <div class="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm transition-all hover:shadow-md animate-fade-in relative group">
-                    ${isAdmin ? `
-                        <button onclick="deleteMessage(${msg.id})" class="absolute top-5 right-5 text-slate-300 hover:text-red-500 transition-colors p-1" title="메시지 삭제">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
-                    ` : ''}
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center text-white text-sm font-black shadow-lg shadow-blue-100">
-                            ${msg.nickname ? msg.nickname.charAt(0).toUpperCase() : '?'}
-                        </div>
-                        <div>
-                            <p class="font-bold text-slate-800 leading-none">${msg.nickname}</p>
-                            <span class="text-[10px] text-slate-400 font-medium mt-1 inline-block">${timeStr}</span>
+    <main class="container mx-auto px-6 py-12">
+        <!-- Admin Panel -->
+        <section id="admin-panel" class="hidden mb-16 overflow-hidden bg-white rounded-3xl shadow-xl border border-indigo-50 animate-in slide-in-from-top-8 duration-500">
+            <div class="p-8">
+                <div class="flex items-center justify-between mb-8 pb-6 border-b border-slate-50">
+                    <h2 class="text-xl font-black text-slate-800 flex items-center gap-3">
+                        <span class="w-2 h-8 bg-indigo-600 rounded-full"></span>
+                        신규 프로젝트 아카이빙
+                    </h2>
+                    <button onclick="toggleAdminPanel()" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-2 md:col-span-2">
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-tighter ml-1">웹앱 접속 URL</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="app-url" placeholder="https://..." class="flex-grow px-5 py-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all">
+                            <button onclick="fetchMetadata()" id="btn-fetch" class="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all flex items-center gap-2 whitespace-nowrap">
+                                <i class="fas fa-wand-magic-sparkles"></i> 정보 자동수집
+                            </button>
                         </div>
                     </div>
-                    <p class="text-slate-600 leading-relaxed font-medium whitespace-pre-wrap pl-1">${msg.content}</p>
+                    <div class="space-y-2">
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-tighter ml-1">앱 제목</label>
+                        <input type="text" id="app-title" class="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-tighter ml-1">미리보기 이미지 URL</label>
+                        <input type="text" id="app-image" class="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all">
+                    </div>
+                    <div class="space-y-2 md:col-span-2">
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-tighter ml-1">설명 및 비고</label>
+                        <textarea id="app-desc" rows="3" class="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all resize-none"></textarea>
+                    </div>
                 </div>
-            `;
+                <button onclick="saveApp()" class="mt-10 w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all">
+                    저장하기
+                </button>
+            </div>
+        </section>
+
+        <!-- Project Grid -->
+        <div class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+                <h2 class="text-4xl font-black text-slate-900 tracking-tighter">My Works</h2>
+                <p id="app-count" class="text-slate-400 font-medium mt-2 leading-relaxed">데이터를 동기화하고 있습니다...</p>
+            </div>
+        </div>
+
+        <div id="app-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <!-- Skeleton/Loading -->
+            <div class="col-span-full py-32 text-center">
+                <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-500 border-t-transparent"></div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="py-12 border-t border-slate-200 bg-white mt-20">
+        <div class="container mx-auto px-6 text-center">
+            <p class="text-slate-400 text-sm">© 2024 Lee Jung-do. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- 설정: Supabase 정보 반영 ---
+        const SUPABASE_URL = 'https://zyuybhszykxuafzriksn.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_3h3_2LRYgdyeXdoDO6XZMA_4jQrQTtV';
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let user = null;
+
+        // 세션 상태 감지
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            user = session?.user || null;
+            updateUI();
+            renderApps();
+        });
+
+        function updateUI() {
+            document.getElementById('login-btn').style.display = user ? 'none' : 'block';
+            document.getElementById('admin-controls').style.display = user ? 'flex' : 'none';
         }
 
-        // 목록 로드
-        async function loadMessages() {
-            const { data, error } = await _supabase
-                .from('guestbook')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
-            if (data) {
-                const list = document.getElementById('messageList');
-                if (data.length === 0) {
-                    list.innerHTML = `<div class="text-center py-20 bg-white rounded-[32px] border-2 border-dashed border-slate-100 text-slate-300 font-medium">아직 메시지가 없습니다.</div>`;
-                } else {
-                    list.innerHTML = data.map(msg => createMessageHTML(msg)).join('');
-                }
-                document.getElementById('count').innerText = data.length;
-            }
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) alert("로그인 실패: " + error.message);
+            else toggleModal('login-modal');
         }
 
-        // 메시지 전송
-        async function sendMessage() {
-            const nick = document.getElementById('nickname').value;
-            const content = document.getElementById('content').value;
-            const btn = document.getElementById('sendBtn');
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            location.reload();
+        }
 
-            if (!nick.trim() || !content.trim()) return alert('닉네임과 내용을 모두 입력해 주세요!');
+        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+        function toggleAdminPanel() { document.getElementById('admin-panel').classList.toggle('hidden'); }
+
+        // URL 메타데이터 가져오기
+        async function fetchMetadata() {
+            const urlInput = document.getElementById('app-url');
+            const btn = document.getElementById('btn-fetch');
+            const url = urlInput.value.trim();
+            if (!url) return alert("URL을 입력하세요.");
 
             btn.disabled = true;
-            const { error } = await _supabase
-                .from('guestbook')
-                .insert([{ nickname: nick, content: content }]);
+            btn.classList.add('fetching');
+            btn.innerHTML = `<i class="fas fa-circle-notch animate-spin"></i> 분석중...`;
 
-            if (error) {
-                alert('전송 실패: ' + error.message);
-            } else {
-                document.getElementById('content').value = '';
+            try {
+                const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
+                const result = await response.json();
+                if (result.status === 'success') {
+                    const d = result.data;
+                    document.getElementById('app-title').value = d.title || "";
+                    document.getElementById('app-desc').value = d.description || "";
+                    document.getElementById('app-image').value = d.image?.url || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=800`;
+                }
+            } catch (e) { 
+                alert("정보 자동 수집에 실패했습니다. 수동으로 입력해 주세요."); 
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('fetching');
+                btn.innerHTML = `<i class="fas fa-wand-magic-sparkles"></i> 정보 자동수집`;
             }
-            btn.disabled = false;
         }
 
-        // 실시간 업데이트 구독 (INSERT 및 DELETE 감지)
-        _supabase
-            .channel('public:guestbook')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'guestbook' }, () => {
-                loadMessages();
-            })
-            .subscribe();
+        async function renderApps() {
+            const grid = document.getElementById('app-grid');
+            const { data: apps } = await supabaseClient.from('web_apps').select('*').order('created_at', { ascending: false });
+            
+            document.getElementById('app-count').innerText = `총 ${apps?.length || 0}개의 프로젝트가 기록되었습니다.`;
 
-        // 초기 실행
-        loadMessages();
+            if (!apps || apps.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-32 text-center text-slate-300 font-bold border-4 border-dashed border-slate-100 rounded-3xl">등록된 프로젝트가 없습니다.</div>`;
+                return;
+            }
+
+            grid.innerHTML = apps.map(app => `
+                <div class="app-card bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 flex flex-col h-full group">
+                    <div class="relative aspect-video overflow-hidden bg-slate-100">
+                        <img src="${app.image_url || 'https://via.placeholder.com/600x400'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://via.placeholder.com/600x400'">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+                             <a href="${app.url}" target="_blank" class="text-white font-bold flex items-center gap-2">사이트 바로가기 <i class="fas fa-arrow-right text-xs"></i></a>
+                        </div>
+                    </div>
+                    <div class="p-8 flex flex-col flex-grow">
+                        <h3 class="text-xl font-black text-slate-800 mb-3 leading-tight">${app.title}</h3>
+                        <p class="text-slate-500 text-sm mb-8 flex-grow line-clamp-3 leading-relaxed">${app.description || ''}</p>
+                        <div class="flex items-center justify-between mt-auto pt-6 border-t border-slate-50">
+                            <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">${new Date(app.created_at).toLocaleDateString()} 아카이빙</span>
+                            ${user ? `
+                                <button onclick="deleteApp(${app.id})" class="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm">
+                                    <i class="fas fa-trash-alt text-sm"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function saveApp() {
+            if (!user) return alert("관리자 로그인이 필요합니다.");
+            const title = document.getElementById('app-title').value;
+            const url = document.getElementById('app-url').value;
+            const image_url = document.getElementById('app-image').value;
+            const description = document.getElementById('app-desc').value;
+
+            if (!title || !url) return alert("제목과 URL은 필수입니다.");
+
+            const { error } = await supabaseClient.from('web_apps').insert([{ title, url, image_url, description }]);
+            if (error) alert(error.message);
+            else { 
+                alert('성공적으로 저장되었습니다!'); 
+                document.getElementById('admin-panel').classList.add('hidden');
+                renderApps();
+            }
+        }
+
+        async function deleteApp(id) {
+            if (!confirm('기록에서 삭제하시겠습니까?')) return;
+            const { error } = await supabaseClient.from('web_apps').delete().eq('id', id);
+            if (error) alert("삭제 실패");
+            else renderApps();
+        }
     </script>
 </body>
 </html>
